@@ -7,6 +7,7 @@ import 'package:heart_monitor/widgets/top_status_bar.dart';
 import 'package:heart_monitor/waveforms/respiratory.dart';
 import 'waveforms/waveforms.dart';
 import 'vitals/vitals_panel.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 class MonitorScreen extends StatefulWidget {
   const MonitorScreen({super.key});
@@ -30,6 +31,7 @@ class _MonitorScreenState extends State<MonitorScreen> {
   @override
   void initState() {
     super.initState();
+    WakelockPlus.enable(); // Keep the screen awake
     // Initialize with a baseline heart rate
     _bpm = _lowerBpm + _random.nextInt(_upperBpm - _lowerBpm + 1);
     // Start a timer to update the heart rate every few seconds
@@ -92,8 +94,10 @@ class _MonitorScreenState extends State<MonitorScreen> {
   void _increaseSpO2Range() => _adjustSpO2Range(2);
   void _decreaseSpO2Range() => _adjustSpO2Range(-2);
 
+  // If you want to disable wakelock when done monitoring:
   @override
   void dispose() {
+    WakelockPlus.disable(); // Allow the screen to sleep again
     _timer.cancel();
     super.dispose();
   }
@@ -111,7 +115,7 @@ class _MonitorScreenState extends State<MonitorScreen> {
               children: [
                 // Left side: Waveforms
                 Expanded(
-                  flex: 4,
+                  flex: 3,
                   child: Column(
                     children: [
                       Expanded(

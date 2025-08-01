@@ -84,6 +84,7 @@ class _WaveformLineState extends State<WaveformLine> with SingleTickerProviderSt
 
   void _triggerAlert() {
     if (settings.alarmsEnabled) {
+      AudioPlayer().stop(); // Stop any previous sound
       AudioPlayer().play(AssetSource('sounds/beep.wav'));
     }
 
@@ -98,6 +99,7 @@ class _WaveformLineState extends State<WaveformLine> with SingleTickerProviderSt
 
   void _playHeartbeatSound() {
     if (settings.playBeats && mounted) {
+      AudioPlayer().stop(); // Stop any previous sound
       AudioPlayer().play(AssetSource('sounds/beat.wav'));
     }
   }

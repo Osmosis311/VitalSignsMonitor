@@ -45,6 +45,7 @@ class _HeartRateDisplayState extends State<HeartRateDisplay> with SingleTickerPr
   void _checkAndPlayAlert() async {
     if (widget.bpm > 100) {
       if (!_hasAlerted && settings.alarmsEnabled) {
+        await _audioPlayer.stop();
         await _audioPlayer.play(AssetSource('sounds/beep.wav'));
         _hasAlerted = true;
       }
@@ -121,7 +122,7 @@ class _HeartRateDisplayState extends State<HeartRateDisplay> with SingleTickerPr
                           widget.bpm.toString(),
                           style: const TextStyle(
                             color: Colors.black,
-                            fontSize: 100,
+                            fontSize: 80,
                             fontWeight: FontWeight.bold,
                             fontFamily: 'Nimbus',
                           ),
@@ -131,7 +132,7 @@ class _HeartRateDisplayState extends State<HeartRateDisplay> with SingleTickerPr
                         widget.bpm.toString(),
                         style: TextStyle(
                           color: const Color.fromARGB(255, 42, 255, 74),
-                          fontSize: 100,
+                          fontSize: 80,
                           fontWeight: FontWeight.bold,
                           fontFamily: 'Nimbus',
                         ),

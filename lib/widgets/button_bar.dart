@@ -52,10 +52,10 @@ class _MonitorButtonBarState extends State<MonitorButtonBar> {
       '12-LEAD': ButtonConfig(defaultOn: false, activeColor: Colors.teal, handler: () => _toggle12Lead()),
       'NIBP': ButtonConfig(defaultOn: false, activeColor: Colors.pink, handler: () => _toggleNIBP()),
       'SCOPE': ButtonConfig(defaultOn: false, activeColor: Colors.lime, handler: () => _toggleScope()),
-      'BPM+': ButtonConfig(defaultOn: false, activeColor: Colors.green, handler: () => _handleBpmIncrease()),
       'BPM-': ButtonConfig(defaultOn: false, activeColor: Colors.red, handler: () => _handleBpmDecrease()),
-      'DEFIB': ButtonConfig(defaultOn: false, activeColor: Colors.red, handler: () => _handleSpO2Decrease()),
-      'RECALL': ButtonConfig(defaultOn: false, activeColor: Colors.grey, handler: () => _handleSpO2Increase()),
+      'BPM+': ButtonConfig(defaultOn: false, activeColor: Colors.green, handler: () => _handleBpmIncrease()),      
+      'SAT-': ButtonConfig(defaultOn: false, activeColor: Colors.red, handler: () => _handleSpO2Decrease()),
+      'SAT+': ButtonConfig(defaultOn: false, activeColor: Colors.grey, handler: () => _handleSpO2Increase()),
       'STORE': ButtonConfig(defaultOn: false, activeColor: Colors.green, handler: () => _handleStore()),
     };
   }
@@ -137,7 +137,7 @@ class _MonitorButtonBarState extends State<MonitorButtonBar> {
                           ? Colors
                                 .white
                           : const Color(0xFFDDDDDD),
-                      fontSize: 8,
+                      fontSize: 10,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.3,
                     ),

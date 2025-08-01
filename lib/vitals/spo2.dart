@@ -131,6 +131,7 @@ class _SpO2DisplayState extends State<SpO2Display> {
 
   void _playSpO2Warning() {
     if (settings.alarmsEnabled) {
+      AudioPlayer().stop();
       AudioPlayer().play(AssetSource('sounds/spo2_warning.wav'));
     }
   }
