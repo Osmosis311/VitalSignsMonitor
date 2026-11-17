@@ -5,18 +5,11 @@ import 'package:heart_monitor/vitals/respiratory_rate.dart';
 import 'package:heart_monitor/vitals/spo2.dart';
 
 class VitalsPanel extends StatelessWidget {
-  final int bpm;
   final VoidCallback? onIncreaseSpO2Range;
   final VoidCallback? onDecreaseSpO2Range;
   final String? currentSpO2Range;
 
-  const VitalsPanel({
-    super.key,
-    required this.bpm,
-    this.onIncreaseSpO2Range,
-    this.onDecreaseSpO2Range,
-    this.currentSpO2Range,
-  });
+  const VitalsPanel({super.key, this.onIncreaseSpO2Range, this.onDecreaseSpO2Range, this.currentSpO2Range});
 
   @override
   Widget build(BuildContext context) {
@@ -26,14 +19,14 @@ class VitalsPanel extends StatelessWidget {
       child: Column(
         children: [
           // Expanded Heart Rate display to give it more space
-          Expanded(flex: 2, child: HeartRateDisplay(bpm: bpm)),
+          Expanded(flex: 2, child: HeartRateDisplay()),
           // Other vitals grouped below
           Expanded(
             flex: 3,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                NIBPDisplay(bpm: bpm),
+                NIBPDisplay(),
                 SpO2Display(
                   onIncreaseSpO2Range: onIncreaseSpO2Range,
                   onDecreaseSpO2Range: onDecreaseSpO2Range,

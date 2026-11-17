@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
+import 'package:heart_monitor/global_vitals.dart';
+import 'package:heart_monitor/waveforms/ekg_waveforms.dart';
 import 'package:heart_monitor/widgets/button_bar.dart';
 import 'package:heart_monitor/waveforms/co2_waveform.dart';
 import 'package:heart_monitor/widgets/top_status_bar.dart';
@@ -17,7 +20,7 @@ class MonitorScreen extends StatefulWidget {
 }
 
 class _MonitorScreenState extends State<MonitorScreen> {
-  late int _bpm;
+  final GlobalVitals _globalVitals = GetIt.I<GlobalVitals>();
   int _lowerBpm = 70;
   int _upperBpm = 80;
 
@@ -33,7 +36,7 @@ class _MonitorScreenState extends State<MonitorScreen> {
     super.initState();
     WakelockPlus.enable(); // Keep the screen awake
     // Initialize with a baseline heart rate
-    _bpm = _lowerBpm + _random.nextInt(_upperBpm - _lowerBpm + 1);
+    _globalVitals.bpm = _lowerBpm + _random.nextInt(_upperBpm - _lowerBpm + 1);
     // Start a timer to update the heart rate every few seconds
     _timer = Timer.periodic(Duration(seconds: 2 + _random.nextInt(3)), (timer) {
       _updateBpm();
@@ -44,7 +47,7 @@ class _MonitorScreenState extends State<MonitorScreen> {
     // Generate a new random BPM within the defined range
     if (!mounted) return;
     setState(() {
-      _bpm = _lowerBpm + _random.nextInt(_upperBpm - _lowerBpm + 1);
+      _globalVitals.bpm = _lowerBpm + _random.nextInt(_upperBpm - _lowerBpm + 1);
     });
   }
 
@@ -119,11 +122,9 @@ class _MonitorScreenState extends State<MonitorScreen> {
                   child: Column(
                     children: [
                       Expanded(
-                        child: WaveformLine(
-                          label: 'I',
-                          color: const Color.fromARGB(255, 69, 241, 21),
-                          waveformType: WaveformType.ecgI,
-                          bpm: _bpm,
+                        child: Container(
+                          decoration: BoxDecoration(border: Border.all(color: Colors.transparent, width: 1.0)),
+                          child: WaveformLine(label: 'I', color: Colors.green, waveformType: WaveformType.ecgI),
                         ),
                       ),
                       Expanded(
@@ -131,7 +132,6 @@ class _MonitorScreenState extends State<MonitorScreen> {
                           label: 'II',
                           color: const Color.fromARGB(255, 232, 49, 207),
                           waveformType: WaveformType.ecgII,
-                          bpm: _bpm,
                         ),
                       ),
                       Expanded(
@@ -139,7 +139,6 @@ class _MonitorScreenState extends State<MonitorScreen> {
                           label: 'III',
                           color: const Color.fromARGB(255, 110, 110, 250),
                           waveformType: WaveformType.ecgIII,
-                          bpm: _bpm,
                         ),
                       ),
                       Expanded(
@@ -156,7 +155,6 @@ class _MonitorScreenState extends State<MonitorScreen> {
                 Expanded(
                   flex: 1,
                   child: VitalsPanel(
-                    bpm: _bpm,
                     onIncreaseSpO2Range: _increaseSpO2Range,
                     onDecreaseSpO2Range: _decreaseSpO2Range,
                     currentSpO2Range: '$_lowerSpO2-$_upperSpO2',
@@ -166,7 +164,6 @@ class _MonitorScreenState extends State<MonitorScreen> {
             ),
           ),
 
-          // Bottom button bar with BPM callbacks
           // Bottom button bar with BPM AND SpO2 callbacks
           MonitorButtonBar(
             onIncreaseBpm: _increaseBpmRange,
@@ -174,9 +171,9 @@ class _MonitorScreenState extends State<MonitorScreen> {
             onIncreaseBpmFast: _increaseBpmRangeFast,
             onDecreaseBpmFast: _decreaseBpmRangeFast,
             currentBpmRange: '$_lowerBpm-$_upperBpm',
-            onIncreaseSpO2: _increaseSpO2Range, // ADD THIS LINE
-            onDecreaseSpO2: _decreaseSpO2Range, // ADD THIS LINE
-            currentSpO2Range: '$_lowerSpO2-$_upperSpO2', // ADD THIS LINE
+            onIncreaseSpO2: _increaseSpO2Range,
+            onDecreaseSpO2: _decreaseSpO2Range,
+            currentSpO2Range: '$_lowerSpO2-$_upperSpO2',
           ),
         ],
       ),

@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:get_it/get_it.dart';
+import 'package:heart_monitor/global_vitals.dart';
 import 'package:heart_monitor/settings.dart';
 import 'package:heart_monitor/widgets/alarms_widget.dart';
+import 'package:provider/provider.dart';
 
 class HeartRateDisplay extends StatefulWidget {
-  final int bpm;
-  const HeartRateDisplay({super.key, required this.bpm});
+  const HeartRateDisplay({super.key});
 
   @override
   State<HeartRateDisplay> createState() => _HeartRateDisplayState();
@@ -14,7 +15,8 @@ class HeartRateDisplay extends StatefulWidget {
 
 class _HeartRateDisplayState extends State<HeartRateDisplay> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  bool _hasAlerted = false;
+  bool _wasHigh = false;
+  int _previousBpm = 75;
   final AudioPlayer _audioPlayer = AudioPlayer();
   final SettingsService settings = GetIt.I<SettingsService>();
 
@@ -22,36 +24,29 @@ class _HeartRateDisplayState extends State<HeartRateDisplay> with SingleTickerPr
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: Duration(milliseconds: (60000 / widget.bpm.clamp(30, 200)).round()),
+      duration: Duration(milliseconds: (60000 / _previousBpm.clamp(30, 200)).round()),
       vsync: this,
     )..repeat();
-
-    _checkAndPlayAlert();
   }
 
-  @override
-  void didUpdateWidget(HeartRateDisplay oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.bpm != oldWidget.bpm) {
-      _controller.duration = Duration(milliseconds: (60000 / widget.bpm.clamp(30, 200)).round());
+  void _updateBpmIfChanged(int bpm) {
+    if (bpm != _previousBpm) {
+      _controller.duration = Duration(milliseconds: (60000 / bpm.clamp(30, 200)).round());
       if (!_controller.isAnimating) {
         _controller.repeat();
       }
-
-      _checkAndPlayAlert();
+      _checkAndPlayAlert(bpm);
+      _previousBpm = bpm;
     }
   }
 
-  void _checkAndPlayAlert() async {
-    if (widget.bpm > 100) {
-      if (!_hasAlerted && settings.alarmsEnabled) {
-        await _audioPlayer.stop();
-        await _audioPlayer.play(AssetSource('sounds/beep.wav'));
-        _hasAlerted = true;
-      }
-    } else {
-      _hasAlerted = false;
+  void _checkAndPlayAlert(int currentBpm) async {
+    final isHigh = currentBpm > 100;
+    if (isHigh && !_wasHigh && settings.alarmsEnabled) {
+      await _audioPlayer.stop();
+      await _audioPlayer.play(AssetSource('sounds/heart_rate_warning.wav'));
     }
+    _wasHigh = isHigh;
   }
 
   @override
@@ -63,85 +58,95 @@ class _HeartRateDisplayState extends State<HeartRateDisplay> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
-    final bool isHigh = widget.bpm > 100;
+    return Consumer<GlobalVitals>(
+      builder: (context, vitals, child) {
+        final currentBpm = vitals.bpm;
+        final isHigh = currentBpm > 100;
 
-    return SizedBox(
-      width: double.infinity,
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, child) {
-          final flashing = _controller.value < 0.5;
+        // Update BPM if changed
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _updateBpmIfChanged(currentBpm);
+        });
 
-          return Stack(
-            children: [
-              // Top-left label and blinking heart icon
-              Positioned(
-                top: 0,
-                left: 0,
-                child: Row(
-                  children: [
-                    Text('HR', style: TextStyle(color: Colors.greenAccent.shade400, fontSize: 16)),
-                    const SizedBox(width: 8),
-                    Icon(flashing ? Icons.favorite : Icons.favorite_border, color: Colors.redAccent, size: 24),
-                  ],
-                ),
-              ),
+        return SizedBox(
+          width: double.infinity,
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              final flashing = _controller.value < 0.5;
 
-              // Top-right: Pacing Off + bpm
-              Positioned(
-                top: 0,
-                right: 8,
-                child: Row(
-                  children: [
-                    AlarmsStatusWidget(),
-                    const SizedBox(width: 10),
-                    Text(
-                      'Pace Off',
-                      style: TextStyle(color: Colors.greenAccent.shade400, fontSize: 12, fontFamily: 'Arial'),
+              return Stack(
+                children: [
+                  // Top-left: HR label + heart icon
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    child: Row(
+                      children: [
+                        Text('HR', style: TextStyle(color: Colors.greenAccent.shade400, fontSize: 16)),
+                        const SizedBox(width: 8),
+                        Icon(flashing ? Icons.favorite : Icons.favorite_border, color: Colors.redAccent, size: 24),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'bpm',
-                      style: TextStyle(color: Colors.greenAccent.shade400, fontSize: 12, fontFamily: 'Arial'),
-                    ),
-                  ],
-                ),
-              ),
+                  ),
 
-              // Centered BPM display
-              Center(
-                child: isHigh
-                    ? Container(
-                        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 40),
-                        decoration: BoxDecoration(
-                          color: flashing ? Colors.red : Colors.transparent,
-                          border: Border.all(color: Colors.red, width: 4),
-                          borderRadius: BorderRadius.circular(6),
+                  // Top-right: Pacing Off + alarms + bpm
+                  Positioned(
+                    top: 0,
+                    right: 8,
+                    child: Row(
+                      children: [
+                        const AlarmsStatusWidget(),
+                        const SizedBox(width: 10),
+                        Text(
+                          'Pace Off',
+                          style: TextStyle(color: Colors.greenAccent.shade400, fontSize: 12, fontFamily: 'Arial'),
                         ),
-                        child: Text(
-                          widget.bpm.toString(),
-                          style: const TextStyle(
-                            color: Colors.black,
-                            fontSize: 80,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Nimbus',
+                        const SizedBox(width: 8),
+                        Text(
+                          'bpm',
+                          style: TextStyle(color: Colors.greenAccent.shade400, fontSize: 12, fontFamily: 'Arial'),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Center: BPM display
+                  Center(
+                    child: isHigh
+                        ? Container(
+                            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 40),
+                            decoration: BoxDecoration(
+                              color: flashing ? Colors.red : Colors.transparent,
+                              border: Border.all(color: Colors.red, width: 4),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              currentBpm.toString(),
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontSize: 80,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Nimbus',
+                              ),
+                            ),
+                          )
+                        : Text(
+                            currentBpm.toString(),
+                            style: const TextStyle(
+                              color: Color.fromARGB(255, 42, 255, 74),
+                              fontSize: 80,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Nimbus',
+                            ),
                           ),
-                        ),
-                      )
-                    : Text(
-                        widget.bpm.toString(),
-                        style: TextStyle(
-                          color: const Color.fromARGB(255, 42, 255, 74),
-                          fontSize: 80,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Nimbus',
-                        ),
-                      ),
-              ),
-            ],
-          );
-        },
-      ),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }

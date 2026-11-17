@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get_it/get_it.dart';
+import 'package:heart_monitor/global_vitals.dart';
 import 'package:heart_monitor/monitor.dart';
 import 'package:heart_monitor/settings.dart';
+import 'package:provider/provider.dart';
 
 final getIt = GetIt.instance;
 
@@ -15,6 +17,7 @@ void main() {
 
 void setupServices() {
   getIt.registerSingleton<SettingsService>(SettingsService());
+  getIt.registerSingleton<GlobalVitals>(GlobalVitals());
 }
 
 class MainApp extends StatelessWidget {
@@ -22,9 +25,15 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: Scaffold(body: Center(child: MonitorScreen())),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: GetIt.I<GlobalVitals>()),
+        ChangeNotifierProvider.value(value: GetIt.I<SettingsService>()),
+      ],
+      child: const MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(body: Center(child: MonitorScreen())),
+      ),
     );
   }
 }

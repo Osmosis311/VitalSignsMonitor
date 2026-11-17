@@ -155,27 +155,23 @@ class _MonitorButtonBarState extends State<MonitorButtonBar> {
   }
 
   void _handleSpO2Increase() {
-    _buttonConfigs['RECALL']!.isOn = true;
+    _buttonConfigs['SAT+']!.isOn = true;
     widget.onIncreaseSpO2?.call();
-    debugPrint('SpO2 increased - Current range: ${widget.currentSpO2Range}');
-
-    // ADD THIS:
+    debugPrint('SpO2 increased - Current range: ${widget.currentSpO2Range}');    
     Future.delayed(const Duration(milliseconds: 200), () {
       setState(() {
-        _buttonConfigs['RECALL']!.isOn = false;
+        _buttonConfigs['SAT+']!.isOn = false;
       });
     });
   }
 
   void _handleSpO2Decrease() {
-    _buttonConfigs['DEFIB']!.isOn = true;
+    _buttonConfigs['SAT-']!.isOn = true;
     widget.onDecreaseSpO2?.call();
-    debugPrint('SpO2 decreased - Current range: ${widget.currentSpO2Range}');
-
-    // ADD THIS:
+    debugPrint('SpO2 decreased - Current range: ${widget.currentSpO2Range}');    
     Future.delayed(const Duration(milliseconds: 200), () {
       setState(() {
-        _buttonConfigs['DEFIB']!.isOn = false;
+        _buttonConfigs['SAT-']!.isOn = false;
       });
     });
   }
@@ -193,8 +189,7 @@ class _MonitorButtonBarState extends State<MonitorButtonBar> {
 
   // Button handlers - customize these for your needs
   void _toggleMenu() {
-    _buttonConfigs['MENU']!.toggle();
-    // TODO: Open/close main menu
+    _buttonConfigs['MENU']!.toggle();    
   }
 
   void _toggleAlarms() {
@@ -204,13 +199,11 @@ class _MonitorButtonBarState extends State<MonitorButtonBar> {
   }
 
   void _toggleLeads() {
-    _buttonConfigs['LEADS']!.toggle();
-    // TODO: Toggle ECG lead display mode
+    _buttonConfigs['LEADS']!.toggle();    
   }
 
   void _handlePrint() {
-    _buttonConfigs['PRINT']!.isOn = true; // Momentarily show as active
-    // TODO: Print current waveforms
+    _buttonConfigs['PRINT']!.isOn = true; // Momentarily show as active    
     Future.delayed(const Duration(milliseconds: 500), () {
       setState(() {
         _buttonConfigs['PRINT']!.isOn = false;
@@ -219,21 +212,18 @@ class _MonitorButtonBarState extends State<MonitorButtonBar> {
   }
 
   void _toggleFreeze() {
-    _buttonConfigs['FREEZE']!.toggle();
-    // TODO: Freeze/unfreeze all waveforms
+    _buttonConfigs['FREEZE']!.toggle();    
   }
 
   void _toggleTrends() {
-    _buttonConfigs['TRENDS']!.toggle();
-    // TODO: Show/hide trend graphs
+    _buttonConfigs['TRENDS']!.toggle();    
   }
 
   void _toggleSetup() {
     _buttonConfigs['SETUP']!.toggle();
     if (_buttonConfigs['SETUP']!.isOn && widget.currentBpmRange != null) {
       debugPrint('SETUP active - Current BPM range: ${widget.currentBpmRange}');
-    }
-    // TODO: Open/close setup menu
+    }    
   }
 
   void _toggleEvents() {
@@ -242,15 +232,12 @@ class _MonitorButtonBarState extends State<MonitorButtonBar> {
   }
 
   void _toggle12Lead() {
-    _buttonConfigs['12-LEAD']!.toggle();
-    // TODO: Switch to/from 12-lead ECG view
+    _buttonConfigs['12-LEAD']!.toggle();    
   }
 
   void _toggleNIBP() {
     _buttonConfigs['NIBP']!.toggle();
-    if (_buttonConfigs['NIBP']!.isOn) {
-      // TODO: Start blood pressure measurement
-      // Auto-turn off after measurement
+    if (_buttonConfigs['NIBP']!.isOn) {            
       Future.delayed(const Duration(seconds: 3), () {
         setState(() {
           _buttonConfigs['NIBP']!.isOn = false;
@@ -260,12 +247,11 @@ class _MonitorButtonBarState extends State<MonitorButtonBar> {
   }
 
   void _toggleScope() {
-    _buttonConfigs['SCOPE']!.toggle();
-    // TODO: Open/close waveform scope settings
+    _buttonConfigs['SCOPE']!.toggle();    
   }
 
   void _handleBpmIncrease() {
-    _buttonConfigs['BPM+']!.isOn = true; // Momentarily show as active
+    _buttonConfigs['BPM+']!.isOn = true;
     widget.onIncreaseBpm?.call();
     debugPrint('BPM increased - Current range: ${widget.currentBpmRange}');
 
@@ -289,13 +275,11 @@ class _MonitorButtonBarState extends State<MonitorButtonBar> {
   }
 
   void _toggleDefib() {
-    _buttonConfigs['DEFIB']!.toggle();
-    // TODO: Enable/disable defibrillator mode (DANGER!)
+    _buttonConfigs['DEFIB']!.toggle();    
   }
 
   void _handleRecall() {
-    _buttonConfigs['RECALL']!.isOn = true; // Momentarily show as active
-    // TODO: Recall previous settings
+    _buttonConfigs['RECALL']!.isOn = true; // Momentarily show as active    
     Future.delayed(const Duration(milliseconds: 300), () {
       setState(() {
         _buttonConfigs['RECALL']!.isOn = false;
@@ -304,8 +288,7 @@ class _MonitorButtonBarState extends State<MonitorButtonBar> {
   }
 
   void _handleStore() {
-    _buttonConfigs['STORE']!.isOn = true; // Momentarily show as active
-    // TODO: Store current settings
+    _buttonConfigs['STORE']!.isOn = true; // Momentarily show as active    
     Future.delayed(const Duration(milliseconds: 300), () {
       setState(() {
         _buttonConfigs['STORE']!.isOn = false;
