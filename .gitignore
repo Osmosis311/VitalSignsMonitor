@@ -78,3 +78,6 @@ app.*.map.json
 
 # VS Code (optional: uncomment if you don't want to share launch configs)
 #.vscode/
+
+# Screenshots rendered by test/screens_test.dart
+test/goldens/
