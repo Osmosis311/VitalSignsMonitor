@@ -44,10 +44,13 @@ class AlarmLamp extends StatelessWidget {
 
 /// Second status line: who the patient is and how the monitor is configured.
 class InfoLine extends StatelessWidget {
-  const InfoLine({super.key, required this.sim, required this.settings, required this.height});
+  const InfoLine({super.key, required this.sim, required this.settings, required this.height, this.patientInfo});
   final PatientSim sim;
   final MonitorSettings settings;
   final double height;
+
+  /// Age, sex and weight when showing a bed other than the main patient.
+  final String? patientInfo;
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +83,7 @@ class InfoLine extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              chip(st.patientInfo, color: MC.text),
+              chip(patientInfo ?? st.patientInfo, color: MC.text),
               chip('Profile: ICU ${st.category}'),
               chip(sim.pacing ? 'Paced' : 'Non-paced', color: sim.pacing ? MC.ecg : MC.dim),
               chip('Arrhythmia: On'),

@@ -87,6 +87,25 @@ void main() {
   };
   Scenario sc(String id) => kScenarios.firstWhere((s) => s.id == id);
 
+  for (final n in const [4, 6, 8]) {
+    testWidgets(
+      'central $n',
+      (t) => shot(
+        t,
+        'central_$n',
+        tablet,
+        seconds: 6,
+        before: (t, sim, st, k) async {
+          st.update(() => st.centralBeds = n);
+        },
+        after: (t, sim, st, k) async {
+          await t.tap(find.text('Central Station'));
+          if (n == 8) sim.setRhythm('vt');
+        },
+        tail: 14,
+      ),
+    );
+  }
   testWidgets('full tablet', (t) => shot(t, 'full_tablet', tablet, seconds: 40));
   testWidgets('full desktop', (t) => shot(t, 'full_desktop', desktop, seconds: 40));
   testWidgets('full phone', (t) => shot(t, 'full_phone', phone, seconds: 40));

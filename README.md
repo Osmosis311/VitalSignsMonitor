@@ -50,6 +50,15 @@ The **Change Screen** key switches between five layouts:
 | Graphical trends | The last hour of HR, SpO₂, ABP, etCO₂ and awRR as graphs |
 | ST and events | ST map for the twelve leads and the alarm and event history |
 
+### Central station
+
+The **Central Station** key switches to a nurses'-station view of 4, 6 or 8 beds (pick the number in
+its top bar). Each sector is its own simulated patient with an ECG and pleth trace, HR, SpO₂, NIBP and
+respiratory rate, and flashes when that bed alarms. The first bed is the app's main patient; the other
+seven are a fixed ward defined in `lib/ui/central.dart`. Touch a sector to open that bed on the full
+monitor. Once the ward exists, the hidden control panel gets a row of bed chips so any of the
+patients can be driven. Alarm tones sound for any bed on the station, and Silence acknowledges them all.
+
 Above the traces there is an alarm lamp across the top edge, the alarm message bar, and an information
 line (patient details, profile, filter, sweep speed, recorder and network state).
 
@@ -67,6 +76,7 @@ line (patient details, profile, filter, sweep speed, recorder and network state)
 | Vitals Trend | Minute-by-minute table of the numerics and cuff readings |
 | Alarm Limits | Low and high limits for each parameter |
 | 12-Lead ECG | All twelve leads, live |
+| Central Station | Multi-bed view; press again to return to the bedside screen |
 | Change Screen | Picks one of the five layouts above |
 | Main Setup | Patient name, bed label, leads, trace size, sweep speed, optional waves, volumes, °C / °F |
 | Standby | Suspends monitoring until the screen is touched |

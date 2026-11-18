@@ -28,6 +28,9 @@ class MonitorSettings extends ChangeNotifier {
 
   ScreenLayout layout = ScreenLayout.full;
 
+  /// Beds shown on the central station: 4, 6 or 8.
+  int centralBeds = 6;
+
   Lead ecg1 = Lead.ii;
   Lead ecg2 = Lead.v1;
   bool showEcg2 = true;
@@ -88,6 +91,7 @@ class MonitorSettings extends ChangeNotifier {
     'category': category,
     'patientInfo': patientInfo,
     'layout': layout.name,
+    'centralBeds': centralBeds,
     'showPap': showPap,
     'showCvp': showCvp,
     'showIcp': showIcp,
@@ -115,6 +119,8 @@ class MonitorSettings extends ChangeNotifier {
     category = j['category'] as String? ?? category;
     patientInfo = j['patientInfo'] as String? ?? patientInfo;
     layout = ScreenLayout.values.firstWhere((l) => l.name == j['layout'], orElse: () => layout);
+    final beds = (j['centralBeds'] as num?)?.toInt();
+    if (beds == 4 || beds == 6 || beds == 8) centralBeds = beds!;
     showPap = j['showPap'] as bool? ?? showPap;
     showCvp = j['showCvp'] as bool? ?? showCvp;
     showIcp = j['showIcp'] as bool? ?? showIcp;

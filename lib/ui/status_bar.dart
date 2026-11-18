@@ -17,6 +17,8 @@ class StatusBar extends StatelessWidget {
     required this.now,
     required this.onSecret,
     required this.height,
+    this.bedLabel,
+    this.patientName,
   });
 
   final PatientSim sim;
@@ -27,6 +29,10 @@ class StatusBar extends StatelessWidget {
   /// Long-press on the clock: opens the control panel.
   final VoidCallback onSecret;
   final double height;
+
+  /// Set when showing a bed other than the main patient.
+  final String? bedLabel;
+  final String? patientName;
 
   static String _two(int n) => n.toString().padLeft(2, '0');
 
@@ -72,7 +78,7 @@ class StatusBar extends StatelessWidget {
     final s = Scale.of(context);
     final ts = labelStyle(height * 0.44, MC.text, weight: 600);
     final dim = labelStyle(height * 0.4, MC.dim);
-    final name = settings.patientName.trim();
+    final name = (patientName ?? settings.patientName).trim();
     final paused = sim.alarmsPaused;
     final rem = sim.pauseRemaining;
 
@@ -89,7 +95,7 @@ class StatusBar extends StatelessWidget {
             padding: EdgeInsets.symmetric(horizontal: 8 * s),
             alignment: Alignment.center,
             decoration: BoxDecoration(color: MC.windowTitle, borderRadius: BorderRadius.circular(2 * s)),
-            child: Text(settings.bedLabel, style: ts),
+            child: Text(bedLabel ?? settings.bedLabel, style: ts),
           ),
           SizedBox(width: 4 * s),
           ConstrainedBox(

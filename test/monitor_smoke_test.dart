@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:heart_monitor/app/settings.dart';
 import 'package:heart_monitor/app/sounds.dart';
 import 'package:heart_monitor/sim/patient_sim.dart';
+import 'package:heart_monitor/ui/central.dart';
 import 'package:heart_monitor/ui/control_panel.dart';
 import 'package:heart_monitor/ui/monitor_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -90,6 +91,27 @@ void main() {
       st.update(() => st.layout = ScreenLayout.full);
       await run(0.5);
 
+      // Central station: bed counts, and opening a bed from its sector.
+      await press('Central Station');
+      await run(1);
+      expect(find.text('CENTRAL STATION'), findsOneWidget);
+      for (final n in ['4', '8', '6']) {
+        await tester.tap(find.text(n));
+        await run(0.5);
+        expect(st.centralBeds, int.parse(n));
+        expect(find.byType(BedSector), findsNWidgets(int.parse(n)));
+        expect(tester.takeException(), isNull, reason: '$n beds');
+      }
+      await tester.tap(find.text('OKAFOR, N'));
+      await run(1);
+      expect(find.text('CENTRAL STATION'), findsNothing);
+      expect(find.textContaining('OKAFOR, N'), findsOneWidget, reason: 'the bedside screen is now that patient');
+      await press('Central Station');
+      await run(0.5);
+      await tester.tap(find.byType(BedSector).first);
+      await run(0.5);
+      expect(find.textContaining('OKAFOR, N'), findsNothing);
+
       await press('Pause Alarms');
       await run(0.5);
       expect(sim.alarmsPaused, isTrue);
@@ -113,7 +135,12 @@ void main() {
       await tester.scrollUntilVisible(
         find.text('Atrial fibrillation'),
         60,
-        scrollable: find.descendant(of: find.byType(ControlPanel), matching: find.byType(Scrollable)).first,
+        scrollable: find
+            .descendant(
+              of: find.byType(ControlPanel),
+              matching: find.byWidgetPredicate((w) => w is Scrollable && w.axisDirection == AxisDirection.down),
+            )
+            .first,
       );
       await tester.ensureVisible(find.text('Atrial fibrillation'));
       await run(0.2);

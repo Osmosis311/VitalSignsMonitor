@@ -10,10 +10,24 @@ import '../sim/scenarios.dart';
 /// It is not part of the monitor's own interface and nothing on the screen
 /// hints at it. Long-press the clock (or press H on a keyboard) to open it.
 class ControlPanel extends StatefulWidget {
-  const ControlPanel({super.key, required this.sim, required this.settings, required this.onClose});
+  const ControlPanel({
+    super.key,
+    required this.sim,
+    required this.settings,
+    required this.onClose,
+    this.beds = const [],
+    this.bed = 0,
+    this.onBed,
+  });
   final PatientSim sim;
   final MonitorSettings settings;
   final VoidCallback onClose;
+
+  /// Bed labels when the central station is in use; the panel drives one
+  /// patient at a time.
+  final List<String> beds;
+  final int bed;
+  final ValueChanged<int>? onBed;
 
   @override
   State<ControlPanel> createState() => _ControlPanelState();
@@ -49,6 +63,26 @@ class _ControlPanelState extends State<ControlPanel> {
                   ],
                 ),
               ),
+              if (widget.beds.length > 1)
+                SizedBox(
+                  height: 40,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.fromLTRB(10, 0, 10, 6),
+                    children: [
+                      for (var i = 0; i < widget.beds.length; i++)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: ChoiceChip(
+                            label: Text(widget.beds[i]),
+                            selected: i == widget.bed,
+                            showCheckmark: false,
+                            onSelected: (_) => widget.onBed?.call(i),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: SegmentedButton<int>(

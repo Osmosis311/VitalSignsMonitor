@@ -11,6 +11,7 @@ import '../sim/alarms.dart';
 import '../sim/ecg_shapes.dart';
 import '../sim/patient_sim.dart';
 import '../sim/wave_buffer.dart';
+import 'central.dart';
 import 'control_panel.dart';
 import 'extras.dart';
 import 'numerics.dart';
@@ -78,7 +79,14 @@ class MonitorScreenState extends State<MonitorScreen> with SingleTickerProviderS
   AlarmPriority? _lastTone;
   double _nextToneAt = 0;
 
-  PatientSim get sim => widget.sim;
+  /// Every patient on the unit. The first is the app's main patient; the
+  /// rest are created the first time the central station is opened.
+  late final List<Bed> _beds = [Bed(widget.sim)];
+  int _cur = 0;
+  bool _central = false;
+
+  /// The patient the bedside screen and the control panel are showing.
+  PatientSim get sim => _beds[_cur].sim;
   MonitorSettings get st => widget.settings;
 
   @override
@@ -93,12 +101,8 @@ class MonitorScreenState extends State<MonitorScreen> with SingleTickerProviderS
         if (mounted) setState(() => _boot = false);
       });
     }
-    sim.addListener(_onSim);
     st.addListener(_onSettings);
-    sim.onBeat = (b) {
-      if (!_standby && !_boot) widget.sounds.qrs(sim.spo2Value, st.qrsVolume);
-    };
-    _onSettings();
+    _bind();
     HardwareKeyboard.instance.addHandler(_onKey);
   }
 
@@ -108,9 +112,11 @@ class MonitorScreenState extends State<MonitorScreen> with SingleTickerProviderS
     _ticker.dispose();
     _blinkTimer?.cancel();
     _bootTimer?.cancel();
-    sim.removeListener(_onSim);
+    _unbind();
     st.removeListener(_onSettings);
-    sim.onBeat = null;
+    for (final b in _beds.skip(1)) {
+      b.sim.dispose();
+    }
     _frame.dispose();
     super.dispose();
   }
@@ -119,8 +125,53 @@ class MonitorScreenState extends State<MonitorScreen> with SingleTickerProviderS
     final dt = (elapsed - _last).inMicroseconds / 1e6;
     _last = elapsed;
     if (_standby || _boot) return;
-    sim.advance(dt);
+    for (final b in _beds) {
+      b.sim.advance(dt);
+    }
     if (!_frozen) _frame.value++;
+  }
+
+  void _bind() {
+    final s = sim;
+    s.addListener(_onSim);
+    s.onBeat = (b) {
+      if (!_standby && !_boot && !_central) widget.sounds.qrs(s.spo2Value, st.qrsVolume);
+    };
+    _onSettings();
+  }
+
+  void _unbind() {
+    sim.removeListener(_onSim);
+    sim.onBeat = null;
+  }
+
+  /// Makes bed [i] the one on the bedside screen and in the control panel.
+  void _select(int i) {
+    if (i == _cur || i >= _beds.length) return;
+    _unbind();
+    _cur = i;
+    _win = _Win.none;
+    _bind();
+  }
+
+  String _bedLabel(int i) {
+    if (i == 0) return st.bedLabel;
+    final m = RegExp(r'^(.*?)(\d+)\s*$').firstMatch(st.bedLabel);
+    return m == null ? 'BED ${i + 1}' : '${m.group(1)}${int.parse(m.group(2)!) + i}';
+  }
+
+  String _bedName(int i) => i == 0 ? st.patientName : _beds[i].name ?? '';
+
+  void _toggleCentral() {
+    widget.sounds.key(st.qrsVolume == 0 ? 0 : 2);
+    while (_beds.length < 8) {
+      final i = _beds.length;
+      _beds.add(makeWardBed(i, _bedLabel(i), widget.sim.clock));
+    }
+    setState(() {
+      _central = !_central;
+      _win = _Win.none;
+    });
   }
 
   void _onSettings() {
@@ -148,7 +199,14 @@ class MonitorScreenState extends State<MonitorScreen> with SingleTickerProviderS
     }
 
     // Alarm tones repeat for as long as something is unacknowledged.
-    final p = _standby ? null : sim.soundingPriority;
+    // The central station sounds for any bed it is showing.
+    var p = _standby ? null : sim.soundingPriority;
+    if (_central && !_standby) {
+      for (final b in _beds.take(st.centralBeds)) {
+        final q = b.sim.soundingPriority;
+        if (q != null && (p == null || q.index < p.index)) p = q;
+      }
+    }
     if (p == null) {
       if (_lastTone != null) widget.sounds.stopAlarm();
       _lastTone = null;
@@ -200,7 +258,7 @@ class MonitorScreenState extends State<MonitorScreen> with SingleTickerProviderS
     final lead = st.ecg1;
     final now = sim.clock();
     String t2(int n) => n.toString().padLeft(2, '0');
-    _strip = WaveSnapshot(_live.putIfAbsent(lead, () => sim.lead(lead)), 6);
+    _strip = WaveSnapshot(_live.putIfAbsent((_cur, lead), () => sim.lead(lead)), 6);
     _stripHeader =
         '${st.bedLabel}   ${st.patientName.isEmpty ? '' : '${st.patientName}   '}'
         '${t2(now.hour)}:${t2(now.minute)}:${t2(now.second)}   Lead ${kLeadNames[lead]}   25 mm/s   10 mm/mV   '
@@ -211,7 +269,8 @@ class MonitorScreenState extends State<MonitorScreen> with SingleTickerProviderS
 
   // --------------------------------------------------------------- sources --
 
-  WaveSource _src(Object key, WaveSource Function() make, {double keep = 16}) {
+  WaveSource _src(Object name, WaveSource Function() make, {double keep = 16, int? bed}) {
+    final key = (bed ?? _cur, name);
     final live = _live.putIfAbsent(key, make);
     if (!_frozen) return live;
     return _snap.putIfAbsent(key, () => WaveSnapshot(live, keep));
@@ -755,6 +814,48 @@ class MonitorScreenState extends State<MonitorScreen> with SingleTickerProviderS
     ];
   }
 
+  // ------------------------------------------------------- central station --
+
+  /// The bed whose alarm is most urgent, for the lamp.
+  PatientSim _worst() {
+    var best = _beds.first.sim;
+    for (final b in _beds.take(st.centralBeds)) {
+      final a = b.sim.alarmsPaused || b.sim.alarms.isEmpty ? null : b.sim.alarms.first;
+      final cur = best.alarmsPaused || best.alarms.isEmpty ? null : best.alarms.first;
+      if (a != null && (cur == null || a.priority.index < cur.priority.index)) best = b.sim;
+    }
+    return best;
+  }
+
+  Widget _centralGrid() {
+    final n = st.centralBeds;
+    Widget sector(int i) {
+      final b = _beds[i];
+      return Expanded(
+        child: BedSector(
+          label: _bedLabel(i),
+          name: _bedName(i),
+          sim: b.sim,
+          ecg: _src('central-ecg', () => b.sim.lead(Lead.ii), bed: i),
+          pleth: _src('pleth', () => b.sim.pleth, bed: i),
+          repaint: _frame,
+          blink: _blink,
+          mmPerSec: st.sweep / 2,
+          onTap: () => setState(() {
+            _select(i);
+            _central = false;
+          }),
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        for (var row = 0; row < n ~/ 2; row++) Expanded(child: Row(children: [sector(row * 2), sector(row * 2 + 1)])),
+      ],
+    );
+  }
+
   // ------------------------------------------------------------- soft keys --
 
   List<SoftKey> _keys() {
@@ -763,7 +864,15 @@ class MonitorScreenState extends State<MonitorScreen> with SingleTickerProviderS
     return [
       SoftKey('Silence', Icons.notifications_off_outlined, () {
         widget.sounds.stopAlarm();
-        _press(sim.silence);
+        _press(() {
+          if (_central) {
+            for (final b in _beds) {
+              b.sim.silence();
+            }
+          } else {
+            sim.silence();
+          }
+        });
       }),
       SoftKey(
         paused ? 'Resume Alarms' : 'Pause Alarms',
@@ -796,6 +905,7 @@ class MonitorScreenState extends State<MonitorScreen> with SingleTickerProviderS
       SoftKey('Vitals Trend', Icons.table_rows_outlined, () => _open(_Win.trends), lit: _win == _Win.trends),
       SoftKey('Alarm Limits', Icons.tune, () => _open(_Win.limits), lit: _win == _Win.limits),
       SoftKey('12-Lead ECG', Icons.monitor_heart_outlined, () => _press(() => _twelve = !_twelve), lit: _twelve),
+      SoftKey('Central Station', Icons.grid_view, _toggleCentral, lit: _central),
       SoftKey('Change Screen', Icons.dashboard_outlined, () => _open(_Win.screen), lit: _win == _Win.screen),
       SoftKey('Main Setup', Icons.settings_outlined, () => _open(_Win.setup), lit: _win == _Win.setup),
       SoftKey(
@@ -858,46 +968,65 @@ class MonitorScreenState extends State<MonitorScreen> with SingleTickerProviderS
                   children: [
                     Column(
                       children: [
-                        AlarmLamp(sim: sim, blink: _blink, height: lampH),
-                        StatusBar(
-                          sim: sim,
-                          settings: st,
-                          blink: _blink,
-                          now: sim.clock(),
-                          onSecret: togglePanel,
-                          height: barH,
-                        ),
-                        InfoLine(sim: sim, settings: st, height: infoH),
-                        Expanded(
-                          flex: 100,
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              if (big)
-                                _bigNumbers()
-                              else
-                                Row(
-                                  children: [
-                                    Expanded(child: _twelve ? _twelveLead() : _stack(bands, (b) => b.wave)),
-                                    if (st.miniTrendsOn && !_twelve)
-                                      SizedBox(width: trendW, child: _stack(bands, (b) => b.trend)),
-                                    SizedBox(width: numW, child: _stack(bands, (b) => b.tile)),
-                                  ],
-                                ),
-                              if (_frozen)
-                                Align(
-                                  alignment: Alignment.topCenter,
-                                  child: Container(
-                                    margin: EdgeInsets.only(top: 4 * s),
-                                    padding: EdgeInsets.symmetric(horizontal: 10 * s, vertical: 3 * s),
-                                    color: MC.text,
-                                    child: Text('WAVES FROZEN', style: labelStyle(13 * s, Colors.black, weight: 700)),
-                                  ),
-                                ),
-                            ],
+                        AlarmLamp(sim: _central ? _worst() : sim, blink: _blink, height: lampH),
+                        if (_central) ...[
+                          CentralBar(
+                            height: barH,
+                            count: st.centralBeds,
+                            onCount: (n) => st.update(() => st.centralBeds = n),
+                            alarming: _beds
+                                .take(st.centralBeds)
+                                .where((b) => !b.sim.alarmsPaused && b.sim.alarms.isNotEmpty)
+                                .length,
+                            now: widget.sim.clock(),
+                            onSecret: togglePanel,
+                            showDemo: st.showDemoTag,
                           ),
-                        ),
-                        if (!big) ..._lowerRows(),
+                          Expanded(child: _centralGrid()),
+                        ] else ...[
+                          StatusBar(
+                            sim: sim,
+                            settings: st,
+                            blink: _blink,
+                            now: sim.clock(),
+                            onSecret: togglePanel,
+                            height: barH,
+                            bedLabel: _bedLabel(_cur),
+                            patientName: _bedName(_cur),
+                          ),
+                          InfoLine(sim: sim, settings: st, height: infoH, patientInfo: _beds[_cur].info),
+                        ],
+                        if (!_central)
+                          Expanded(
+                            flex: 100,
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                if (big)
+                                  _bigNumbers()
+                                else
+                                  Row(
+                                    children: [
+                                      Expanded(child: _twelve ? _twelveLead() : _stack(bands, (b) => b.wave)),
+                                      if (st.miniTrendsOn && !_twelve)
+                                        SizedBox(width: trendW, child: _stack(bands, (b) => b.trend)),
+                                      SizedBox(width: numW, child: _stack(bands, (b) => b.tile)),
+                                    ],
+                                  ),
+                                if (_frozen)
+                                  Align(
+                                    alignment: Alignment.topCenter,
+                                    child: Container(
+                                      margin: EdgeInsets.only(top: 4 * s),
+                                      padding: EdgeInsets.symmetric(horizontal: 10 * s, vertical: 3 * s),
+                                      color: MC.text,
+                                      child: Text('WAVES FROZEN', style: labelStyle(13 * s, Colors.black, weight: 700)),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        if (!big && !_central) ..._lowerRows(),
                         SoftKeyBar(keys: _keys(), height: keyH),
                       ],
                     ),
@@ -927,7 +1056,14 @@ class MonitorScreenState extends State<MonitorScreen> with SingleTickerProviderS
                         top: 0,
                         bottom: 0,
                         width: math.min(400.0, w * 0.64),
-                        child: ControlPanel(sim: sim, settings: st, onClose: togglePanel),
+                        child: ControlPanel(
+                          sim: sim,
+                          settings: st,
+                          onClose: togglePanel,
+                          beds: [for (var i = 0; i < _beds.length; i++) _bedLabel(i)],
+                          bed: _cur,
+                          onBed: (i) => setState(() => _select(i)),
+                        ),
                       ),
                     if (_standby) Positioned.fill(child: _standbyScreen(s)),
                     if (_boot) Positioned.fill(child: _bootScreen(s)),

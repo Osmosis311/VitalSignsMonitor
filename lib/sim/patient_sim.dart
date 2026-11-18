@@ -1238,22 +1238,26 @@ class PatientSim extends ChangeNotifier {
   }
 
   /// Fills the trend memory with a quiet hour so the graphs are not empty
-  /// at start-up.
-  void _seedHistory() {
-    const base = {
-      'hr': (72.0, 1.6),
-      'spo2': (98.0, 0.5),
-      'abpS': (122.0, 3.0),
-      'abpD': (78.0, 2.0),
-      'abpM': (95.0, 2.0),
-      'pap': (16.0, 1.0),
-      'cvp': (8.0, 0.6),
-      'icp': (10.0, 0.7),
-      'etco2': (38.0, 1.0),
-      'rr': (14.0, 0.8),
-      'bis': (96.0, 1.0),
-      'temp': (36.8, 0.03),
-      'co': (5.5, 0.2),
+  /// at start-up. With [fromNow] the hour is built around the present
+  /// readings instead of a textbook-normal patient.
+  void seedHistory({bool fromNow = false}) => _seedHistory(fromNow: fromNow);
+
+  void _seedHistory({bool fromNow = false}) {
+    double v(num? now, double normal) => fromNow && now != null ? now.toDouble() : normal;
+    final base = {
+      'hr': (v(hr, 72), 1.6),
+      'spo2': (v(spo2Value, 98), 0.5),
+      'abpS': (v(abpS, 122), 3.0),
+      'abpD': (v(abpD, 78), 2.0),
+      'abpM': (v(abpM, 95), 2.0),
+      'pap': (v(papM, 16), 1.0),
+      'cvp': (v(cvpValue, 8), 0.6),
+      'icp': (v(icpValue, 10), 0.7),
+      'etco2': (v(etco2Value, 38), 1.0),
+      'rr': (v(awrr, 14), 0.8),
+      'bis': (v(bisValue, 96), 1.0),
+      'temp': (v(tempValue, 36.8), 0.03),
+      'co': (v(cardiacOutput, 5.5), 0.2),
     };
     for (final e in base.entries) {
       var w = 0.0;
